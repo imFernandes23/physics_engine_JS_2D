@@ -80,8 +80,6 @@ function keyControl(b){
     b.y += b.vel_y;
 }
 
-
-
 //ball
 
 class Ball{
