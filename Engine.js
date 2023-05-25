@@ -72,8 +72,7 @@ function keyControl(b){
 
     b.vel = b.vel.add(b.acc);
     b.vel = b.vel.mult(1-friction);
-    b.x += b.vel.x;
-    b.y += b.vel.y
+    b.pos = b.pos.add(b.vel)
 }
 
 //Vectors
@@ -89,7 +88,7 @@ class Vector{
     }
 
     subtr(v){
-        return new Vector(this.x + v.x, this.y + v.y);
+        return new Vector(this.x - v.x, this.y - v.y);
     }
 
     mag(){
@@ -129,8 +128,7 @@ class Vector{
 
 class Ball{
     constructor(x, y, r){
-        this.x = x;
-        this.y = y;
+        this.pos = new Vector(x,y);
         this.r = r;
         this.vel = new Vector(0,0);
         this.acc = new Vector(0,0);
@@ -141,8 +139,8 @@ class Ball{
 
     drawBall(){
         ctx.beginPath();
-        ctx.arc(this.x, this.y, this.r, 0, 2*Math.PI);
-        ctx.strokeStyle = 'black';
+        ctx.arc(this.pos.x, this.pos.y, this.r, 0, 2*Math.PI);
+        ctx.strokeStyle = 'red';
         ctx.stroke();
         ctx.fillStyle = 'red';
         ctx.fill()
@@ -159,22 +157,60 @@ class Ball{
         ctx.stroke();
     }
 }
+//Colision
+
+function round(number, precision){
+    let factor = 10**precision;
+    return Math.round(number * factor) / facto;
+}
+
+function coll_det_bb(b1, b2){
+    if(b1.r + b2.r >= b2.pos.subtr(b1.pos).mag()){
+        return true;
+    }else{
+        return false;
+    }
+}
+
+function pen_res_bb(b1,b2){
+    let dist = b1.pos.subtr(b2.pos);
+    let pen_depth = b1.r + b2.r - dist.mag();
+    let pen_res = dist.unit().mult(pen_depth/2);
+    b1.pos = b1.pos.add(pen_res);
+    b2.pos = b2.pos.add(pen_res.mult(-1));
+}
 
 //Animate
 
 function animate(){
     ctx.clearRect(0,0, canvas.clientWidth, canvas.clientHeight);
-    BALLZ.forEach((b) => {
-        b.drawBall();
-        b.display()
+    BALLZ.forEach((b, index) => {
+        b.drawBall(); 
         if(b.player){
             keyControl(b)
         }
+        for(let i = index + 1; i < BALLZ.length; i++){
+            if(coll_det_bb(BALLZ[index], BALLZ[i])){
+                pen_res_bb(BALLZ[index], BALLZ[i]);
+            }
+        }
+
+        b.display()
     })
+
+    
     requestAnimationFrame(animate)
 }
 
 let Ball1 = new Ball(200,200,30);
+let Ball2 = new Ball(300,300,40);
+let Ball3 = new Ball(100,200, 20);
+let Ball4 = new Ball(340,200,30);
+let Ball5 = new Ball(300,400,40);
+let Ball6 = new Ball(150,90, 20);
+let Ball7 = new Ball(400,270,30);
+let Ball8 = new Ball(200,300,40);
+let Ball9 = new Ball(100,400, 20);
 Ball1.player = true;
 
 requestAnimationFrame(animate)
