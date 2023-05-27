@@ -7,4 +7,5 @@
 #canvas{
     display: block;
     background-color: #fffacc;
+    position: absolute;
 }

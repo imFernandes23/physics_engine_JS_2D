@@ -6,15 +6,16 @@ let y = 100;
 
 let LEFT, UP, RIGHT, DOWN;
 let friction = 0.05;
-let elasticity = 1;
+
 
 const BALLZ = []
+const WALLZ = []
 
 //Resizable canvas
 
 function resizeCanvas(){
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.width = window.innerWidth ;
+    canvas.height = window.innerHeight ;
 }
 
 window.addEventListener('resize', resizeCanvas);
@@ -137,6 +138,7 @@ class Ball{
         }
         this.vel = new Vector(0,0);
         this.acc = new Vector(0,0);
+        this.elasticity = 1;
         this.acceleration = 1;
         this.player = false
         BALLZ.push(this)
@@ -152,14 +154,11 @@ class Ball{
     }
     
     display(){
-        this.vel.drawVec(500, 400, 10, 'green');
-        this.acc.unit().drawVec(500, 400, 50, 'blue');
-        this.acc.normal().drawVec(500, 400, 50, 'black');
+        this.vel.drawVec(this.pos.x, this.pos.y, 10, 'green');
+        ctx.fillStyle = "black";
+        ctx.fillText("m = " + this.m, this.pos.x - 10, this.pos.y - 5);
+        ctx.fillText("e = " + this.elasticity, this.pos.x - 10, this.pos.y + 5);
 
-        ctx.beginPath();
-        ctx.arc(500, 400, 50, 0, 2*Math.PI);
-        ctx.strokeStyle = 'black';
-        ctx.stroke();
     }
 
     reposition(){
@@ -169,12 +168,30 @@ class Ball{
         this.pos = this.pos.add(this.vel)
     }
 }
+
+class Wall{
+    constructor(x1, y1, x2, y2){
+        this.start = new Vector(x1,y1);
+        this.end = new Vector(x2,y2);
+        WALLZ.push(this);
+    }
+
+    drawWall(){
+        ctx.beginPath();
+        ctx.moveTo(this.start.x, this.start.y);
+        ctx.lineTo(this.end.x, this.end.y);
+        ctx.strokeStyle = 'black';
+        ctx.stroke();
+    }
+
+    wallUnit(){
+        return this.end.subtr(this.start).unit();
+    }
+}
+
 //Collision
 
-function round(number, precision){
-    let factor = 10**precision;
-    return Math.round(number * factor) / factor;
-}
+//Ball to Ball
 
 function coll_det_bb(b1, b2){
     if(b1.r + b2.r >= b2.pos.subtr(b1.pos).mag()){
@@ -196,7 +213,7 @@ function coll_res_bb(b1,b2){
     let normal = b1.pos.subtr(b2.pos).unit();
     let relVel = b1.vel.subtr(b2.vel);
     let sepVel = Vector.dot(relVel, normal)
-    let new_sepVel = -sepVel * elasticity;
+    let new_sepVel = -sepVel * Math.min(b1.elasticity, b2.elasticity);
 
     let vsep_diff = new_sepVel - sepVel;
     let impulse = vsep_diff / (b1.inv_m + b2.inv_m);
@@ -208,10 +225,55 @@ function coll_res_bb(b1,b2){
     b2.vel = b2.vel.add(impulseVec.mult(-b2.inv_m))
 }
 
-function momentum_display(){
-    let momentum = Ball1.vel.add(Ball2.vel).mag();
-    ctx.fillText( 'Momentum: ' + round(momentum, 4), 500,300);
+//Ball to Wall
+
+function closestPointBW(b1,w1){
+    let ballToWallStart = w1.start.subtr(b1.pos);
+    if(Vector.dot(w1.wallUnit() , ballToWallStart) > 0){
+        return w1.start
+    }
+
+    let wallEndToBall = b1.pos.subtr(w1.end);
+    if(Vector.dot(w1.wallUnit(), wallEndToBall) > 0){
+        return w1.end;
+    }
+
+    let closestDist = Vector.dot(w1.wallUnit(), ballToWallStart);
+    let closestVect = w1.wallUnit().mult(closestDist);
+    return w1.start.subtr(closestVect)
 }
+
+function coll_det_BW(b1,w1){
+    let ballToClosest = closestPointBW(b1,w1).subtr(b1.pos);
+    if(ballToClosest.mag() <= b1.r){
+        return true
+    }
+}
+
+function pen_res_BW(b1, w1){
+    let penVect = b1.pos.subtr(closestPointBW(b1,w1));
+    b1.pos = b1.pos.add(penVect.unit().mult(b1.r - penVect.mag()))
+}
+
+function coll_res_BW(b1,w1){
+    let normal = b1.pos.subtr(closestPointBW(b1,w1)).unit();
+    let sepVel = Vector.dot(b1.vel, normal);
+    let new_sepVel = -sepVel * b1.elasticity;
+    let vsep_diff = sepVel - new_sepVel;
+    b1.vel = b1.vel.add(normal.mult(-vsep_diff));
+}
+
+//Auxilliar Functions
+
+function round(number, precision){
+    let factor = 10**precision;
+    return Math.round(number * factor) / factor;
+}
+
+function randInt(min, max){
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 //Animate
 
 function animate(){
@@ -221,6 +283,13 @@ function animate(){
         if(b.player){
             keyControl(b)
         }
+        WALLZ.forEach((w) => {
+            if(coll_det_BW(BALLZ[index], w)){
+                pen_res_BW(BALLZ[index], w);
+                coll_res_BW(BALLZ[index], w);
+            }
+        })
+
         for(let i = index + 1; i < BALLZ.length; i++){
             if(coll_det_bb(BALLZ[index], BALLZ[i])){
                 pen_res_bb(BALLZ[index], BALLZ[i]);
@@ -228,24 +297,32 @@ function animate(){
             }
         }
 
+        
         b.display()
         b.reposition()
     })
 
-    momentum_display()
+    WALLZ.forEach((w) => {
+        w.drawWall();
+    })
 
     requestAnimationFrame(animate)
 }
 
-let Ball1 = new Ball(200,200,30,30);
-let Ball2 = new Ball(300,300,40,0);
-//let Ball3 = new Ball(100,200, 20);
-//let Ball4 = new Ball(340,200,30);
-//let Ball5 = new Ball(300,400,40);
-//let Ball6 = new Ball(150,90, 20);
-//let Ball7 = new Ball(400,270,30);
-//let Ball8 = new Ball(200,300,40);
-//let Ball9 = new Ball(100,400, 20);
-Ball1.player = true;
+let Wall1 = new Wall(200,200, 400,300);
+let Wall2 = new Wall(400,600, 700,300);
+
+for( let i = 0; i < 30; i++){
+    let newBall = new Ball(randInt(100,window.innerWidth),randInt(100,window.innerHeight),randInt(20,50),randInt(1,10))
+    newBall.elasticity = randInt(0,10) / 10
+}
+
+BALLZ[0].player = true
+
+//Edge Canvas
+let edge1 = new Wall(0, 0, canvas.clientWidth, 0);
+let edge2 = new Wall(canvas.clientWidth, 0, canvas.clientWidth, canvas.clientHeight);
+let edge3 = new Wall(canvas.clientWidth, canvas.clientHeight, 0, canvas.clientHeight);
+let edge4 = new Wall(0,canvas.clientHeight,0,0);
 
 requestAnimationFrame(animate)
