@@ -369,7 +369,7 @@ function animate(){
 
     WALLZ.forEach((w) => {
         w.drawWall();
-        w.keyControl();
+        //w.keyControl();
         w.reposition()
     })
 
@@ -377,17 +377,19 @@ function animate(){
 }
 
 let Wall1 = new Wall(200,300, 400,300);
-// let Wall2 = new Wall(400,600, 700,300);
+let Wall2 = new Wall(400,600, 700,300);
 
-// for( let i = 0; i < 30; i++){
-//     let newBall = new Ball(randInt(100,window.innerWidth),randInt(100,window.innerHeight),randInt(20,50),randInt(1,10))
-//     newBall.elasticity = randInt(0,10) / 10
-// }
+for( let i = 0; i < 30; i++){
+    let newBall = new Ball(randInt(100,window.innerWidth),randInt(100,window.innerHeight),randInt(20,50),randInt(1,10))
+    newBall.elasticity = randInt(0,10) / 10
+}
 
 //Edge Canvas
-// let edge1 = new Wall(0, 0, canvas.clientWidth, 0);
-// let edge2 = new Wall(canvas.clientWidth, 0, canvas.clientWidth, canvas.clientHeight);
-// let edge3 = new Wall(canvas.clientWidth, canvas.clientHeight, 0, canvas.clientHeight);
-// let edge4 = new Wall(0,canvas.clientHeight,0,0);
+let edge1 = new Wall(0, 0, canvas.clientWidth, 0);
+let edge2 = new Wall(canvas.clientWidth, 0, canvas.clientWidth, canvas.clientHeight);
+let edge3 = new Wall(canvas.clientWidth, canvas.clientHeight, 0, canvas.clientHeight);
+let edge4 = new Wall(0,canvas.clientHeight,0,0);
+
+BALLZ[0].player = true
 
 requestAnimationFrame(animate)
